@@ -1,16 +1,15 @@
+const config = require('./config.js');
 var express = require('express');
 var cors = require('cors');
+
+var domainRequirementsService = require('./services/domainRequirementsService');
 var autocompleteService = require("./services/autocompleteService");
 var additionalRequirements = require('./services/additionalRequirements');
 var relatedRequirementsService = require('./services/relatedRequirementsService');
 var relatedRequirementsApplicationService = require('./services/relatedRequirementsApplicationService');
 var generate = require('./services/generateSRS');
 
-var app = express();
-const PORT = process.env.PORT || 8080;
-const HOST = '127.0.0.1';
-
-const VERSION = "1.23.04.11.17"
+var app = express(); 
 
  
 app.use(express.json({limit: '50mb'}));
@@ -23,8 +22,8 @@ app.get('/', async function (req, res, next) {
     try {
         res.setHeader('Content-Type', 'application/json');
         let data = {
-            message: "Hello world!!!",
-            version: VERSION
+            message: "vms_domain_application",
+            version: config.VERSION
         }
         res.end(JSON.stringify(data));
     } catch (error) {
@@ -34,7 +33,31 @@ app.get('/', async function (req, res, next) {
 
 app.get('/version', async function (req, res, next) {
     try {
-        res.end(JSON.stringify({ "version": VERSION }));
+        res.setHeader('Content-Type', 'application/json');
+        let data = {
+            message: "vms_domain_application",
+            version: config.VERSION
+        }
+        res.end(JSON.stringify(data));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateFeaturesModelFromDomainRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await domainRequirementsService.generateFeaturesModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
     } catch (error) {
         res.status(400).send(JSON.stringify(error));
     }
@@ -181,8 +204,8 @@ app.post('/generate', async function (req, res, next) {
         res.status(400).send(JSON.stringify(error));
     }
 }); */
-app.listen(PORT, () => {
-    console.log('Running version ' + VERSION + ` on http://${HOST}:${PORT}`);
+app.listen(config.PORT, () => {
+    console.log('Running version ' + config.VERSION + ` on http://${config.HOST}:${config.PORT}`);
 });
 
 
