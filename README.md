@@ -1,9 +1,9 @@
-"# AutoComplete" 
+# AutoComplete
 
-##Install
+## Install
 
 npm install
 
-##Run
+## Run
 
-npm run
+npm start
