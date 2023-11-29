@@ -7,12 +7,12 @@ name: Build and push the image  of vms_domain_application to docker.io app - AWS
 on:
   push:
     branches:
-      - develop
+      - main
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: 'Variamos-AWS'
+    runs-on: 'aws-self-hosted'
 
     steps:
     - uses: actions/checkout@v2
