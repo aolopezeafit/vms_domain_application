@@ -1,16 +1,10 @@
 # FROM node:lts-bullseye-slim
 FROM node:16-alpine
 
-# create root application folder
-WORKDIR /vms_domain_application
-
-# copy configs to /variaMosLenguageService folder
-COPY package*.json ./
-COPY tsconfig.json ./
- 
+RUN mkdir /app
+WORKDIR /app
+COPY package.json /app
 RUN npm install
- 
-
+COPY . /app
 EXPOSE 4000
-
-CMD [ "npm", "start" ]
+CMD ["npm", "start"]
