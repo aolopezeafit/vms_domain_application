@@ -3,6 +3,7 @@ var express = require('express');
 var cors = require('cors');
 
 var domainRequirementsService = require('./services/domainRequirementsService');
+var serenaTransfrmations = require('./services/serenaTransformations.js');
 var autocompleteService = require("./services/autocompleteService");
 var additionalRequirements = require('./services/additionalRequirements');
 var relatedRequirementsService = require('./services/relatedRequirementsService');
@@ -49,6 +50,98 @@ app.post('/generateFeaturesModelFromDomainRequirements', async function (req, re
         console.log(req.body.data)
         res.setHeader('Content-Type', 'application/json');
         let project = await domainRequirementsService.generateFeaturesModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateCriteriaModelFromApplicationRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await serenaTransfrmations.generateCriteriaModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+app.post('/generateGoalModelFromApplicationRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await serenaTransfrmations.generateGoalModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateRiskModelFromApplicationRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await serenaTransfrmations.generateRiskModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+app.post('/generateTreatmentModelFromApplicationRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await serenaTransfrmations.generateTreatmentModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+app.post('/generateSerenaModelFromApplicationRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await serenaTransfrmations.generateSerenaModel(req);
         console.log(project);
         let contentResponse = {
             transactionId: "1",
