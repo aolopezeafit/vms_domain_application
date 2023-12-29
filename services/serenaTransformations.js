@@ -360,10 +360,10 @@ async function generateTreatmentModel(req) {
                     let priority=projectUtils.findElementProperty(req,"Description").metadata.secret.priority;
                         //console.log(priority)
                       
-                    if(priority=="shall") securityVal="++++";
-                    else if(priority=="should") securityVal="+++";
-                    else if(priority=="could") securityVal="++";
-                    else if(priority=="will") securityVal="+";
+                    if(priority=="shall") securityVal="++";
+                    else if(priority=="should") securityVal="+";
+                    //else if(priority=="could") securityVal="++";
+                    //else if(priority=="will") securityVal="+";
                     else securityVal="=";
 
                     //if(threatVal=="=") value=securityVal;
@@ -371,11 +371,11 @@ async function generateTreatmentModel(req) {
                     //else if(threatVal=="--") value =securityVal-2;
                     //else if(threatVal=="---") value =securityVal-3;
                     //else if(threatVal=="----") value =securityVal-4;
-                    rel=serenaModelUtils.createRelationship(sm,securityClaim,"String"," ,++++,+++,++,+,=","Value",securityVal);
+                    rel=serenaModelUtils.createRelationship(sm,securityClaim,"String"," ,++,+,=","Value",securityVal);
                     treatmentModel.relationships.push(rel);
                     riskSerenaModel.elements.forEach((el) => {
                         if(el.type=="SecurityClaim" && !securityClaims.hasOwnProperty(el.id)){
-                            rel=serenaModelUtils.createRelationship(sm,el,"String"," ,++++,+++,++,+,=","Value"," ");
+                            rel=serenaModelUtils.createRelationship(sm,el,"String"," ,++,+,=","Value"," ");
                             treatmentModel.relationships.push(rel);
                         }
                     });
@@ -608,7 +608,7 @@ try{
                         riskModel.elements.forEach((elm) => {
                             if(elm.type=="SecurityClaim"){
                                 console.log(elm)
-                                relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,----,---,--,-,=","Value","")
+                                relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,--,-,=","Value","")
                                 riskModel.relationships.push(relationship);
                             }
                         });
@@ -647,8 +647,10 @@ async function generateSerenaModel(req) {
     }
     let treatmentSerenaModel;
     let goalSerenaModel;
+    let riskSerenaModel;
     try{
     treatmentSerenaModel=projectUtils.findModelByType(project,"SERENATreatmentModel");
+    riskSerenaModel=projectUtils.findModelByType(project,"SERENARiskModel");
     goalSerenaModel=projectUtils.findModelByType(project,"SERENAGoalModel");
     
    
@@ -656,8 +658,24 @@ async function generateSerenaModel(req) {
         throw "No SERENATreatmentModel! Generate the Treatment Model."
         return;
     }
+    if(!riskSerenaModel){
+        throw "No SERENARiskModel! Generate the Risk Model."
+        return;
+    }
+    if(!goalSerenaModel){
+        throw "No SERENAGoalModel! Generate the Goal Model."
+        return;
+    }
     if(treatmentSerenaModel instanceof Array && treatmentSerenaModel.length>1){
         throw "You can have a maximum of one SERENA Treatment Model"
+        return;
+    }
+    if(riskSerenaModel instanceof Array && riskSerenaModel.length>1){
+        throw "You can have a maximum of one SERENA Risk Model"
+        return;
+    }
+    if(goalSerenaModel instanceof Array && goalSerenaModel.length>1){
+        throw "You can have a maximum of one SERENA Goal Model"
         return;
     }
     //console.log(riskSerenaModel)
@@ -968,7 +986,7 @@ async function generateSerenaModel(req) {
                     && type!="Software system attributes" && type!="Supporting information" && type!="System interface" && type!="System operations"
                     && type!="System modes and states" && type!="Physical characteristics" && type!="Environmental conditions" && type!="Information management"
                     && type!="Policies and regulations" && type!="System life cycle sustainment" && type!="Packaging handling shipping and transportation"){
-                        softGoal= serenaModelUtils.createSoftGoal(type,620+(e*50),fy+(e*50),fw,fh);
+                        softGoal= serenaModelUtils.createSoftGoal(type,1000+(e*50),fy+(e*50),fw,fh);
                         //console.log(securityCriteria);
                         softGoal.metadata={'sourceRequirementId':element.id};
                         serenaModel.elements.push(softGoal);
@@ -976,7 +994,7 @@ async function generateSerenaModel(req) {
                         //requirementsOfAttributes.push(targetrequirement);
                         dicRequirementElement[element.id]=softGoal;
                     }
-                    else if (type=="Constraint"){
+                    else if (type=="Constraint" || type=="Design constraints"){
                         appRequirementsModel.relationships.forEach(rel  =>{
                             if(rel.type=="NonFunctionalRequirement_FunctionalRequirement" && rel.sourceId==element.id){
                                 let targetGoal=serenaModel.elements.find(el => (el.type=="Goal" && el.metadata.sourceRequirementId==rel.targetId));
@@ -990,10 +1008,109 @@ async function generateSerenaModel(req) {
                             }
                         })
                     }
+                    else if(type=="Software system attributes" && type=="Supporting information" && type!="System operations"
+                    && type=="System modes and states" && type=="Physical characteristics" && type=="Environmental conditions" && type=="Information management"
+                    && type!="Policies and regulations" && type=="System life cycle sustainment")
+                    {
+                        //To be determined.
+                        softGoal= serenaModelUtils.createSoftGoal(projectUtils.findElementProperty(element,"Description").metadata.secret.asset,1000+(e*50),fy+(e*50),fw,fh);
+                        //console.log(securityCriteria);
+                        softGoal.metadata={'sourceRequirementId':element.id};
+                        serenaModel.elements.push(softGoal);
+                        //console.log(criteriaModel)
+                        //requirementsOfAttributes.push(targetrequirement);
+                        dicRequirementElement[element.id]=softGoal;
+                    }
                 }
         
             }
         }
+        let opers=serenaModel.elements.filter(x => x.type === "Operationalization");
+        let softGoals=serenaModel.elements.filter(x => x.type === "SoftGoal");
+        serenaModel.elements.forEach((elm) => {
+            i=0;
+            if(elm.type=="Cardinality"){
+                softGoals.forEach(sg =>{
+                    //console.log(sg)
+                    let claim=serenaModelUtils.createClaim("C"+(i+1),750,fy+(i*100),fw,fh);
+                    serenaModel.elements.push(claim);
+                    let relationship=serenaModelUtils.createRelationship(claim,sg,"String","","","")
+                    serenaModel.relationships.push(relationship);
+                    opers.forEach(op => {
+                        if (serenaModel.relationships.some((rel) => (rel.type=="Operationalization_Claim_Goal" && rel.sourceId==op.id && rel.targetId==elm.id))){
+
+                            let relationship=serenaModelUtils.createRelationship(claim,sg,"String","","","")
+                            serenaModel.relationships.push(relationship);
+                        }
+                        //console.log((treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)))
+                        if(treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)){
+                            let vuln_oper = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Vulnerability_Operationalization" && rel1.targetId==op.id));
+                            //console.log(vuln_oper)
+                            let threat_vuln = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Threat_Vulnerability" && vuln_oper.some( vo=>( vo.sourceId===rel1.targetId))));
+                            //console.log(threat_vuln);
+                            let sm_threat=treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="SecurityMechanism_Threat" && threat_vuln.some( tv=>( tv.sourceId===rel1.targetId))));
+                            //console.log(sm_threat);
+                            //get sc where sg is the target
+                            let sc_sg=treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="SecurityClaim_SoftGoal" && rel1.targetId==sg.id));
+                            //console.log(sc_sg);
+                            let sm_sc=treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="SecurityMechanism_SecurityClaim" && sm_threat.some( st=>( st.sourceId===rel1.sourceId)) && sc_sg.some( ss=>( ss.sourceId===rel1.targetId))));
+                            //console.log(sm_sc);
+                            let security = 0;
+                            sm_sc.forEach(ss => {
+                                val=projectUtils.findElementProperty(ss,"Value").value;
+                                switch (val){
+                                    case "++": security+=2; break;
+                                    case "+": security+=1; break;
+                                    default: break;
+                                
+                                }
+                            })
+                            vuln_oper = riskSerenaModel.relationships.filter(rel1 => (rel1.type=="Vulnerability_Operationalization" && rel1.targetId==op.id));
+                            //console.log(vuln_oper)
+                            threat_vuln = riskSerenaModel.relationships.filter(rel1 => (rel1.type=="Threat_Vulnerability" && vuln_oper.some( vo=>( vo.sourceId===rel1.targetId))));
+                            //console.log(threat_vuln);
+                            sc_sg=riskSerenaModel.relationships.filter(rel1 => (rel1.type=="SecurityClaim_SoftGoal" && rel1.targetId==sg.id));
+                            //console.log(sc_sg);
+                            let threat_sc=riskSerenaModel.relationships.filter(rel1 => (rel1.type=="Threat_SecurityClaim" && threat_vuln.some( tv=>( tv.sourceId===rel1.sourceId)) && sc_sg.some( ss=>( ss.sourceId===rel1.targetId))));
+                            //console.log(threat_sc);
+                            let threat = 0;
+                            threat_sc.forEach(ts => {
+                                val=projectUtils.findElementProperty(ts,"Value").value;
+                                switch (val){
+                                    case "--": threat-=2; break;
+                                    case "-": threat-=1; break;
+                                    default: break;
+                                
+                                }
+                            })
+                            overall_val=security+threat;
+                            overall="";
+                            if(overall_val>=2) overall="++";
+                            else if(overall_val==1) overall="+";
+                            else if(overall_val==0) overall="=";
+                            else if(overall_val==-1) overall="-";
+                            else if(overall_val<=-2) overall="--";
+
+                            let relationship=serenaModelUtils.createRelationship(op,claim,"String","--,-,=,+,++","Value",overall)
+                            relationship.type="Operationalization_Claim_Goal";
+                            serenaModel.relationships.push(relationship);
+                            
+                        }
+
+                    });
+
+                    i++;
+
+
+                });
+
+                //console.log(elm)
+                //relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,----,---,--,-,=","Value","")
+                //riskModel.relationships.push(relationship);
+            }
+        });
+        let contextVariable=serenaModelUtils.createContextVariable("Context Variable", 1500,350,fw,fh);
+        serenaModel.elements.push(contextVariable)
         //console.log(serenaModel)
        /*  riskSerenaModel.elements.forEach((element) => {
             if(element.type=="SoftGoal"){
