@@ -1,6 +1,8 @@
 var projectUtils = require('../utils/projectUtils');
 var featuresModelUtils = require('../utils/featuresModelUtils');
 var textUtils = require('../utils/textUtils');
+var secretGraph = require('./secretGraph.json');
+var { Graph } = require('../utils/graph.js');
 
 async function generateFeaturesModel(req) {
     let project = req.body.data.project;
@@ -12,214 +14,407 @@ async function generateFeaturesModel(req) {
 
     let fw = 100;
     let fh = 66;
+    let fx = 512;
     let fy = 80;
     let fdx = 25;
     let fdy = 100;
-    let fi=0
+    let fi = 0
 
-    let dicRequirementFeature=[];
-    let requirementsOfAttributes=[];
+    let dicRequirementFeature = [];
+    let requirementsOfAttributes = [];
 
     for (let r = 0; r < domainRequirementsModel.relationships.length; r++) {
         const relationship = domainRequirementsModel.relationships[r];
-        if (relationship.type=="FunctionalRequirement_FunctionalRequirement") {
-            let type=projectUtils.findElementProperty(relationship, "Type").value;
-            if (type=="Refinement") {
-                let requirement=projectUtils.findModelElement(domainRequirementsModel, relationship.sourceId);
+        if (relationship.type == "FunctionalRequirement_FunctionalRequirement") {
+            let type = projectUtils.findElementProperty(relationship, "Type").value;
+            if (type == "Refinement") {
+                let requirement = projectUtils.findModelElement(domainRequirementsModel, relationship.sourceId);
                 if (requirement.type == "FunctionalRequirement") {
-                    let description= projectUtils.findElementProperty(requirement, "Description").value; 
-                    let words=textUtils.getTextBetweenWords(description, "The", "attribute");
-                    if (words.length==1) {
+                    let description = projectUtils.findElementProperty(requirement, "Description").value;
+                    let words = textUtils.getTextBetweenWords(description, "The", "attribute");
+                    if (words.length == 1) {
                         requirementsOfAttributes.push(requirement);
-                    } 
+                    }
                 }
             }
         }
     }
 
-    let rootRequirementId=null;
-    
-    let featuresModel = featuresModelUtils.createFeatureModel("Features extended");
-    let rootFeature = featuresModelUtils.createRootFeature("Root feature", 520, fy, fw, fh);
-    for (let m = 0; m < domainRequirementsModel.elements.length; m++) {
-        let element = domainRequirementsModel.elements[m];
-        if (element.type == "FunctionalRequirement" && !requirementsOfAttributes.includes(element)) {
-            let identifier= projectUtils.findElementProperty(element, "Identifier").value;
-            if (identifier=="FR0") {
-                rootRequirementId=element.id;
-                rootFeature = featuresModelUtils.createRootFeature(element.name, 520, fy, fw, fh);
-                dicRequirementFeature[element.id]=rootFeature;
-            }
-        }
-    }
+    let rootRequirementId = null;
+
+    let featuresModel = featuresModelUtils.createFeatureModel("Feature model with attributes");
+    let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
     featuresModel.elements.push(rootFeature);
-  
-    for (let m = 0; m < domainRequirementsModel.elements.length; m++) {
-        let element = domainRequirementsModel.elements[m];
-        if (element.id==rootRequirementId) {
-            continue;
-        }
-        if (element.type == "FunctionalRequirement" && !requirementsOfAttributes.includes(element)) {
-            let description= projectUtils.findElementProperty(element, "Description").value;
-            let type="Optional";
-            if (description.startsWith("All ")) {
-                type="Mandatory";
-            } 
-            let feature = featuresModelUtils.createConcreteFeature(element.name, (fi * (fw + fdx)) + fdx , fy + fh + fdy, fw, fh);
-            featuresModel.elements.push(feature);
-            let relationship=featuresModelUtils.createRelationshipFeature_Feature(rootFeature, feature, type);
-            featuresModel.relationships.push(relationship);
-            dicRequirementFeature[element.id]=feature;
-            fi++;
-        }
-    }
 
-    for (let r = 0; r < domainRequirementsModel.relationships.length; r++) {
-        const relationship = domainRequirementsModel.relationships[r];
-        if (relationship.type=="FunctionalRequirement_FunctionalRequirement") {
-            let type=projectUtils.findElementProperty(relationship, "Type").value;
-            if (type=="Dependency") {
-                let sourceFeature=dicRequirementFeature[relationship.sourceId];
-                let targetFeature=dicRequirementFeature[relationship.targetId]; 
-                let includesRelationship=featuresModelUtils.createRelationshipFeature_Feature(sourceFeature, targetFeature, "Includes");
-                featuresModel.relationships.push(includesRelationship);
-            } 
-        }
-    }
+    let graph = loadGraph();
+    //showPaths(graph);
 
-    for (let r = 0; r < domainRequirementsModel.relationships.length; r++) {
-        const relationship = domainRequirementsModel.relationships[r];
-        if (relationship.type=="FunctionalRequirement_FunctionalRequirement") {
-            let type=projectUtils.findElementProperty(relationship, "Type").value;
-            if (type=="Refinement") {
-                let requirement=projectUtils.findModelElement(domainRequirementsModel, relationship.sourceId);
-                let description= projectUtils.findElementProperty(requirement, "Description").value; 
-                let words=textUtils.getTextBetweenWords(description, "The", "attribute");
-                if (words.length==1) {
-                    let attribute=words[0];
-                    let attributeType="String";
-                    let possibleValues=null;
-                    words=textUtils.getTextBetweenWords(description, "options", "end"); 
-                    if (words.length==1) {
-                        attributeType="String";
-                        possibleValues=words[0];
-                    }
-                    let targetFeature=dicRequirementFeature[relationship.targetId]; 
-                    let property=featuresModelUtils.createProperty(attribute, attributeType, null, possibleValues);
-                    targetFeature.properties.push(property); 
-                } 
-            }
-        }
-    }
-
+    let requirements = getRequirements(graph, domainRequirementsModel, requirementsOfAttributes); 
+    createFeatures(featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy); 
     project.productLines[0].domainEngineering.models.push(featuresModel);
     return project;
 }
 
-
-
-//borrar esto 
-async function createRelatedRequirements(model, parentRequirement, domain) {
-    let x = parentRequirement.x; //position x on the diagram
-    let y = parentRequirement.y; //position x on the diagram
-    let w = parentRequirement.width; //width on the diagram
-    let h = parentRequirement.height; //height on the diagram
-    let dy = h + 50;
-    let dx = - (w + 50);
-    console.log("here")
-    var reqs = await addReq.additionalRequirementsSuggest({ "body": { "input": parentRequirement.properties.find(prop => prop.name === "Description").value, "domain": domain } })
-    console.log(reqs)
-    for (let i = 0; i < reqs.additionalReq.length; i++) {
-        let relatedRequirement = await createRelatedRequirement(parentRequirement, i, reqs.additionalReq[i]);
-        if ((relatedRequirement.x + dx) >= 0) relatedRequirement.x += dx;
-        else relatedRequirement.x = 0
-        if ((relatedRequirement.y + dy) >= 0) relatedRequirement.y += dy;
-        else relatedRequirement.y = 0
-
-        model.elements.push(relatedRequirement);
-        let relationship = createRelationship(parentRequirement, relatedRequirement);
-        model.relationships.push(relationship);
-
-
-        dx += w + 50;
-    }
-
-    /*  for (let i = 1; i <= 3; i++) {
-          let relatedRequirement = createRelatedRequirement(parentRequirement, i);
-          relatedRequirement.x += dx;
-          relatedRequirement.y += dy;
-          model.elements.push(relatedRequirement);
-          let relationship = createRelationship(parentRequirement, relatedRequirement);
-          model.relationships.push(relationship);
-  
-          dx += w + 50;
-      } */
-}
-
-function createRelatedRequirement(parentRequirement, index, newReq) {
-    let json = JSON.stringify(parentRequirement);
-    let relatedRequirement = JSON.parse(json);
-    relatedRequirement.id = generateUUID();
-    relatedRequirement.name = "Related security requirement " + (index + 1);
-    relatedRequirement.properties[0].value = parentRequirement.properties[0].value + "_" + (index + 1);
-    relatedRequirement.properties.find(prop => prop.name === "Version").value = 1;
-    relatedRequirement.properties.find(prop => prop.name === "Description").value = newReq.requirement;
-    relatedRequirement.properties.find(prop => prop.name === "StakeholderPriority").value = newReq.priority;
-
-
-    return relatedRequirement;
-}
-
-/* function createRelatedRequirement(parentRequirement, index) {
-    let json = JSON.stringify(parentRequirement);
-    let relatedRequirement = JSON.parse(json);
-    relatedRequirement.id = generateUUID();
-    relatedRequirement.name = "Related requirement " + index;
-    relatedRequirement.properties[0].value = parentRequirement.properties[0].value + "_" + index;
-    relatedRequirement.properties[2].value = "The system must ... " + index;
-
-    return relatedRequirement;
-}
- */
-function createRelationship(parentRequirement, relatedRequirement) {
-    let relationship = {
-        id: generateUUID(),
-        name: "-",
-        type: "SecurityRequirement_SecurityRequirement",
-        sourceId: relatedRequirement.id,
-        targetId: parentRequirement.id,
-        min: 0,
-        max: 99999,
-        points: [],
-        properties: [{
-            id: generateUUID,
-            name: "Type",
-            value: "Refinement",
-            type: "String",
-            custom: false,
-            display: true,
-            possibleValues: "Generalization,Refinement,Evolution,Interactivity,Overlap,Conflicting,Rationalization,Contribution"
-        }]
-    }
-    return relationship;
-}
-
-
-function generateUUID() {
-    var d = new Date().getTime();//Timestamp
-    var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16;//random number between 0 and 16
-        if (d > 0) {//Use timestamp until depleted
-            r = (d + r) % 16 | 0;
-            d = Math.floor(d / 16);
-        } else {//Use microseconds since page-load if supported
-            r = (d2 + r) % 16 | 0;
-            d2 = Math.floor(d2 / 16);
+function getValueFromPart(parts, indexes) {
+    for (let i = 0; i < indexes.length; i++) {
+        const index = indexes[i];
+        if (parts[index]) {
+            return parts[index].word;
         }
-        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
+    }
+    return null;
 }
+
+function getRequirements(graph, domainRequirementsModel) {
+    let initialNodes = graph.findInitialNodes();
+    let ret = [];
+    for (let m = 0; m < domainRequirementsModel.elements.length; m++) {
+        let element = domainRequirementsModel.elements[m];
+        if (element.type == "FunctionalRequirement") {
+            let description = projectUtils.findElementProperty(element, "Description").value;
+            let parts = getSecretParts(graph, initialNodes, description);
+            let item = {
+                element: element,
+                description: description,
+                secret: parts
+            }
+            ret[element] = item;
+        }
+    }
+    return ret;
+}
+
+function createFeatures(featuresModel, requirements, dicRequirementFeature, px, py, pw, ph, pdx, pdy) {
+    let pi = 0
+    for (var key in requirements) {
+        if (requirements.hasOwnProperty(key)) {
+            requirement = requirements[key];
+            let secret = requirement.secret;
+            let name = null;
+            if (secret) {
+                let verb = getValueFromPart(secret, ["_78", "_43"]);
+                let obj = getValueFromPart(secret, ["_58"]);
+                if (verb) {
+                    name = verb;
+                    if (obj) {
+                        name += ' ' + obj;
+                    }
+                }
+            }
+            if (name) {
+                let feature = featuresModelUtils.createConcreteFeature(name, px + (pi * (pw + pdx)) + pdx, py + ph + pdy, pw, ph);
+                featuresModel.elements.push(feature);
+                dicRequirementFeature[element.id] = feature;
+                pi++;
+            }
+        }
+    }
+}
+
+function createConstraints(graph, featuresModel, domainRequirementsModel, requirementsOfAttributes, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy) {
+    let initialNodes = graph.findInitialNodes();
+    let rootFeature = featuresModel.elements[0];
+    for (let m = 0; m < domainRequirementsModel.elements.length; m++) {
+        let element = domainRequirementsModel.elements[m];
+        if (element.type == "FunctionalRequirement" && !requirementsOfAttributes.includes(element)) {
+            let description = projectUtils.findElementProperty(element, "Description").value;
+            let parts = getSecretParts(graph, initialNodes, description);
+            if (parts) {
+                let type = null;
+                if (parts["_70"]) {
+                    type = "Mandatory";
+                }
+                if (parts["_71"]) {
+                    type = "Optional";
+                }
+                if (type) {
+                    let feature = dicRequirementFeature[element.id];
+                    let relationship = featuresModelUtils.createRelationshipFeature_Feature(rootFeature, feature, type);
+                    featuresModel.relationships.push(relationship);
+                }
+            }
+        }
+    }
+}
+
+function getSecretParts(graph, initialNodes, description) {
+    let parts = null;
+    let words = NormalizeWords(description);
+    for (let i = 0; i < initialNodes.length; i++) {
+        const initialNode = initialNodes[i];
+        let token = getTokenFromNode(initialNode);
+        if (token == words[0]) {
+            const paths = graph.findAllPaths(initialNode);
+            for (let p = 0; p < paths.length; p++) {
+                console.log(p);
+                if (p == 66) {
+                    let x = 0;
+                }
+                const path = paths[p];
+                let candidateParts = checkPath(path, words);
+                if (candidateParts != null) {
+                    return candidateParts;
+                }
+            }
+        }
+    }
+
+    return parts;
+}
+
+function checkPath(path, words) {
+    showPath(path);
+    let tokenCount = 0;
+    for (let t = 0; t < path.length; t++) {
+        index = path[t];
+        token = getTokenFromNode(index);
+        if (token != "//") {
+            tokenCount++;
+        }
+    }
+    let tokenCoincidences = [];
+    let parts = null;
+    let candidateParts = [];
+    let w = 0;
+    let wildCard = -1;
+    let t = 0;
+    for (let w = 0; w < words.length; w++) {
+        const word = words[w];
+        let index = null;
+        let token = null;
+        while (true) {
+            index = path[t];
+            token = getTokenFromNode(index);
+            if (token != "//") {
+                break;
+            } else {
+                if (!tokenCoincidences.includes(index)) {
+                    tokenCoincidences.push(index);
+                }
+            }
+            if (t < path.length - 1) {
+                t++;
+            } else {
+                if (t == wildCard) {
+                    return null;
+                }
+            }
+        }
+        if (token == word) {
+            let item = {
+                word: word,
+                key: token,
+                id: index
+            }
+            candidateParts['_' + index] = item;
+            wildCard = -1;
+            if (!tokenCoincidences.includes(index)) {
+                tokenCoincidences.push(index);
+            }
+            t++;
+        } else {
+            if (token.startsWith('<')) {
+                if (!candidateParts['_' + index]) {
+                    let item = {
+                        word: word,
+                        key: token,
+                        id: index
+                    }
+                    candidateParts['_' + index] = item;
+                } else {
+                    candidateParts['_' + index].word = candidateParts['_' + index].word + ' ' + word;
+                }
+                wildCard = t;
+                if (!tokenCoincidences.includes(index)) {
+                    tokenCoincidences.push(index);
+                }
+                t++;
+            }
+            else {
+                if (wildCard > -1) {
+                    t = wildCard;
+                    wildCard = -1;
+                    w--;
+                } else {
+                    // t++;
+                    return null;
+                }
+            }
+        }
+        if (w == words.length - 1) {
+            if (path.length == tokenCoincidences.length) {
+                for (let t = 0; t < path.length; t++) {
+                    if (path[t] != tokenCoincidences[t]) {
+                        return null;
+                    }
+                }
+                return candidateParts;
+            }
+        }
+    }
+    return null;
+}
+
+function getSecretParts2(graph, initialNodes, description) {
+    let parts = null;
+    let tokens = tokenize(description);
+    for (let i = 0; i < initialNodes.length; i++) {
+        const initialNode = initialNodes[i];
+        let word = getWordFromNode(initialNode);
+        if (word == tokens[0]) {
+            const paths = graph.findAllPaths(initialNode);
+            let candidateParts = [];
+            for (let p = 0; p < paths.length; p++) {
+                console.log(p);
+                const path = paths[p];
+                if (p == 66) {
+                    let x = 0;
+                }
+                let w = 0;
+                for (let t = 0; t < tokens.length; t++) {
+                    let token = tokens[t];
+                    if (w >= path.length) {
+                        break;
+                    }
+                    let index = path[w];
+                    word = getWordFromNode(index);
+                    if (word == "//") {
+                        w++;
+                        if (w >= path.length) {
+                            break;
+                        }
+                        index = path[w];
+                        word = getWordFromNode(index);
+                    }
+                    w++;
+                    if (token == word) {
+                        let item = {
+                            word: token,
+                            key: word,
+                            id: index
+                        }
+                        if (token == "PROVIDE" && word == "PROVIDE") {
+                            token = "PROVIDE";
+                        }
+                        candidateParts['_' + index] = item;
+                        if (t == tokens.length - 1) {
+                            parts = candidateParts;
+                            break;
+                        }
+                    } else {
+                        if (word.startsWith('<')) {
+                            let item = {
+                                word: token,
+                                key: word,
+                                id: index
+                            }
+                            if (token == "PROVIDE" && word == "PROVIDE") {
+                                token = "PROVIDE";
+                            }
+                            candidateParts['_' + index] = item;
+                            if (t == tokens.length - 1) {
+                                parts = candidateParts;
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if (parts) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return parts;
+}
+
+function getTokenFromNode(id) {
+    let word = secretGraph.nodes[id].name;
+    return word;
+}
+
+function NormalizeWords(text) {
+    let str = text.toUpperCase();
+    if (!str.endsWith(".")) {
+        str += ".";
+    }
+    str = str.replace(/\./g, ' . ');
+    str = str.replace(/\(/g, ' ( ');
+    str = str.replace(/\)/g, ' ) ');
+    str = str.trim();
+    while (str.includes('  ')) {
+        str = replaceDoubleSpacesWithSingle(str);
+    }
+
+    let tokens = str.split(' ');
+    return tokens;
+}
+
+function replaceDoubleSpacesWithSingle(inputString) {
+    return inputString.replace(/ {2}/g, ' ');
+}
+
+function loadGraph() {
+    let graph = new Graph();
+    if (true) {
+        let dic = [];
+        for (let i = 0; i < secretGraph.nodes.length; i++) {
+            const node = secretGraph.nodes[i];
+            graph.addVertex(i);
+            dic[node.id] = i;
+        }
+        for (let i = 0; i < secretGraph.edges.length; i++) {
+            const edge = secretGraph.edges[i];
+            let sourceId = dic[edge.sourceNodeId];
+            let targetId = dic[edge.targetNodeId];
+            graph.addEdge(sourceId, targetId);
+        }
+    } else {
+        graph.addVertex('A');
+        graph.addVertex('B');
+        graph.addVertex('C');
+        graph.addVertex('D');
+
+        graph.addEdge('A', 'B');
+        graph.addEdge('A', 'C');
+        graph.addEdge('B', 'D');
+        graph.addEdge('C', 'D');
+    }
+    return graph;
+}
+
+function showPaths(graph) {
+    const startNode = 0;
+    const paths = graph.findAllPaths(startNode);
+    for (let i = 0; i < paths.length; i++) {
+        const path = paths[i];
+        let words = [];
+        for (let j = 0; j < path.length; j++) {
+            const id = path[j];
+            let name = secretGraph.nodes[id].name;
+            if (name != "//") {
+                words.push(name);
+            }
+        }
+        console.log(words.join(' '));
+    }
+}
+
+function showPath(path) {
+    let words = [];
+    for (let j = 0; j < path.length; j++) {
+        const id = path[j];
+        let name = secretGraph.nodes[id].name;
+        if (name != "//") {
+            words.push(name);
+        }
+    }
+    console.log(words.join(' '));
+}
+
 
 
 
