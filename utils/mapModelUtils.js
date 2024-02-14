@@ -1,31 +1,45 @@
-function createFeatureModel(name) {
+function createMapModel(name) {
     let model = {
         id: generateUUID(),
         name: name,
-        type: 'Feature model with attributes',
+        type: 'Map',
         elements: [],
         relationships: []
     }
     return model;
 }
 
-function createRootFeature(name, x, y, w, h) {
-    let feature = createFeature("RootFeature", name, x, y, w, h);
-    return feature;
+function createStartIntention(name, x, y, w, h) { 
+    let properties=[];
+    let intention = createIntentionWithProperties("StartIntention", name, x, y, w, h, properties);
+    return intention;
 }
 
-function createAbstractFeature(name, x, y, w, h) {
-    let feature = createFeature("AbstractFeature", name, x, y, w, h);
-    return feature;
-}
+function createStopIntention(name, x, y, w, h) {
+    let properties=[];
+    let intention = createIntentionWithProperties("StopIntention", name, x, y, w, h, properties);
+    return intention; 
+} 
 
-function createConcreteFeature(name, x, y, w, h) {
-    let feature = createFeature("ConcreteFeature", name, x, y, w, h);
-    return feature;
-}
+function createIntention(name, x, y, w, h) {
+    let properties=[
+        {
+            "id": generateUUID(),
+            "name": "Selected",
+            "value": "Undefined",
+            "type": "String",
+            "custom": false,
+            "display": true,
+            "comment": "Selected",
+            "possibleValues": "Undefined,Selected,Unselected"
+        }
+    ]
+    let intention = createIntentionWithProperties("Intention", name, x, y, w, h, properties);
+    return intention; 
+} 
 
-function createFeature(type, name, x, y, w, h) {
-    let feature = {
+function createIntentionWithProperties(type, name, x, y, w, h, properties) {
+    let intention = {
         "id": generateUUID(),
         "name": name,
         "type": type,
@@ -34,26 +48,15 @@ function createFeature(type, name, x, y, w, h) {
         "width": w,
         "height": h,
         "parentId": null,
-        "properties": [
-            {
-                "id": generateUUID(),
-                "name": "Selected",
-                "value": "Undefined",
-                "type": "String",
-                "custom": false,
-                "display": true,
-                "comment": "Selected",
-                "possibleValues": "Undefined,Selected,Unselected"
-            }
-        ]
+        "properties": properties
     }
-    return feature;
+    return intention;
 } 
 
-function createRelationshipFeature_Feature(source, target, type) {
+function createRelationshipMap_Map(source, target, type) {
     let relationship = {
         "id": generateUUID(),
-        "type": source.type + "_Feature",
+        "type": source.type + "_Map",
         "name": "_",
         "sourceId": source.id,
         "targetId": target.id,
@@ -114,6 +117,6 @@ function generateUUID() {
 
 //export methods
 module.exports = {
-    createFeatureModel, createRootFeature, createAbstractFeature, createConcreteFeature, createProperty,
-    createRelationshipFeature_Feature
+    createMapModel, createStartIntention, createStopIntention, createIntention, createProperty,
+    createRelationshipMap_Map
 };

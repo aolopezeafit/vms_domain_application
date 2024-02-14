@@ -3,6 +3,8 @@ var express = require('express');
 var cors = require('cors');
 
 var domainRequirementsService = require('./services/domainRequirementsService');
+var mapModelService = require('./services/mapModelService');
+var graphModelService = require('./services/graphModelService');
 var serenaTransfrmations = require('./services/serenaTransformations.js');
 var autocompleteService = require("./services/autocompleteService");
 var additionalRequirements = require('./services/additionalRequirements');
@@ -297,6 +299,49 @@ app.post('/generate', async function (req, res, next) {
         res.status(400).send(JSON.stringify(error));
     }
 }); */
+
+
+
+app.post('/generateMapModelFromDomainRequirements', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await mapModelService.generateMapModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateJSONFromGraphModel', async function (req, res, next) {
+    try { 
+        let json  = await graphModelService.generateJSON(req);
+        const buffer = Buffer.from(json, 'utf-8'); 
+        const content_encode = buffer.toString('base64'); 
+		let dataResponse ={
+				"name": ''+req.body.data.project.name+'.json',
+				"content": content_encode,
+			  }; 
+		let data={
+		  "transactionId": 'asdf',
+		  "message": 'Success',
+		  "data": dataResponse
+		}  
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(data)); 
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
 app.listen(config.PORT, () => {
     console.log('Running version ' + config.VERSION + ` on http://${config.HOST}:${config.PORT}`);
 });
@@ -305,3 +350,11 @@ app.listen(config.PORT, () => {
 // app.listen(PORT, HOST, () => {
 //     console.log(`Running on http://${HOST}:${PORT}`);
 // });
+
+function uint8ArrayToBase64(uint8Array) {
+    // Convertir Uint8Array a una cadena
+    let binaryString = String.fromCharCode.apply(null, uint8Array);
+
+    // Convertir la cadena a Base64
+    return btoa(binaryString);
+}

@@ -7,7 +7,7 @@ name: Builds and push the image  of vms_domain_application to docker.io app - AW
 on:
   push:
     branches:
-      - main
+      - none
   workflow_dispatch:
 
 jobs:
