@@ -464,7 +464,7 @@ try{
         //console.log(element)
         if(element.metadata) dicRequirementElement[element.metadata.sourceRequirementId]=element;
         else dicRequirementElement[element.id]=element;
-        //console.log(dicRequirementElement)
+        
         }
     }
      for (let r = 0; r < appRequirementsModel.relationships.length; r++) {
@@ -482,6 +482,7 @@ try{
                     //console.log(dicRequirementElement.hasOwnProperty(sourcerequirement.id))
                     if(dicRequirementElement.hasOwnProperty(sourcerequirement.id)){ 
                         oper=dicRequirementElement[sourcerequirement.id];
+                      
                         
                      }
                     else {
@@ -490,6 +491,7 @@ try{
                         riskModel.elements.push(oper);
                         //requirementsOfAttributes.push(sourcerequirement);
                         dicRequirementElement[sourcerequirement.id]=oper;
+                        
                         
                         
                          
@@ -579,18 +581,22 @@ try{
             //requirementsOfAttributes.push(targetrequirement);
             dicRequirementElement[element.id]=securityCriteria;
             i=i+1;
+            
         }
 
     }
     
     }
-
-    console.log(requirementsOper)
+    //console.log(dicRequirementElement)
+    //console.log(requirementsOper)
     Object.values(dicRequirementElement).forEach((element) => {
+        
         sourceId=Object.keys(dicRequirementElement).find(key => dicRequirementElement[key] === element)
         if(element.type=="Operationalization"){
+           //console.log(requirementsOper)
+           console.log(element);
             if(!requirementsOper.hasOwnProperty(element.id)){
-                console.log(element);
+                
                 vuln= serenaModelUtils.createVulnerability("Vulnerability "+ (i), 170,20+(i*50),fw,fh);
                 vuln.metadata={'sourceRequirementId':sourceId};   
                 riskModel.elements.push(vuln);
@@ -604,10 +610,10 @@ try{
                 //dupilcates the relationships needs to be fixed
                 riskModel.elements.forEach((el) => {
                     if(el.type=="Threat"){
-                        console.log(el)
+                        //console.log(el)
                         riskModel.elements.forEach((elm) => {
                             if(elm.type=="SecurityClaim"){
-                                console.log(elm)
+                                //console.log(elm)
                                 relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,--,-,=","Value","")
                                 riskModel.relationships.push(relationship);
                             }
@@ -617,12 +623,12 @@ try{
                 });
                 
                 i=i+1;
-                requirementsOper[oper.id]=oper;
+                //requirementsOper[oper.id]=oper;
             }
         }
 
     });
-    console.log(requirementsOper)
+    //console.log(requirementsOper)
 }catch(e){
     console.log(e)
 }
