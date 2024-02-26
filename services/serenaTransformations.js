@@ -906,11 +906,14 @@ async function generateSerenaModel(req) {
             const rel = treatmentSerenaModel.relationships[r];
             if(rel.type!="SecurityMechanism_SecurityClaim"){
                 if(rel.type=="Vulnerability_Operationalization"){
+                    console.log(rel)
                     let rel1={...rel};
                     serenaModel.relationships.push(rel1);
                     let targetOp={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
+                    console.log(targetOp)
                     let sourceVul={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetOp=dicRequirementElement[targetOp.id];
+                    console.log(sourceVul)
+                    if(dicRequirementElement.hasOwnProperty(targetOp.id)) targetOp=dicRequirementElement[targetOp.id];
                     if(!dicRequirementElement.hasOwnProperty(sourceVul.id)){
                         if(op!=targetOp){
                             op=targetOp;
@@ -930,9 +933,12 @@ async function generateSerenaModel(req) {
                     let rel1={...rel};
                     serenaModel.relationships.push(rel1);
                     let targetVul={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
+                    //console.log(targetVul)
                     let sourceThreat={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetVul=dicRequirementElement[targetVul.id];
-                    if(!dicRequirementElement.hasOwnProperty(sourceThreat.id)){
+                    if(dicRequirementElement.hasOwnProperty(targetVul.id))targetVul=dicRequirementElement[targetVul.id];
+                    //console.log(targetVul)
+                   // console.log(sourceThreat)
+                    if(!dicRequirementElement.hasOwnProperty(sourceThreat.id) && targetVul!=undefined){
                         if(vul!=targetVul){
                             vul=targetVul;
                             i=0;
@@ -952,8 +958,8 @@ async function generateSerenaModel(req) {
                     serenaModel.relationships.push(rel1);
                     let targetThreat={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
                     let sourceSM={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetThreat=dicRequirementElement[targetThreat.id];
-                    if(!dicRequirementElement.hasOwnProperty(sourceSM.id)){
+                    if(dicRequirementElement.hasOwnProperty(targetThreat.id))targetThreat=dicRequirementElement[targetThreat.id];
+                    if(!dicRequirementElement.hasOwnProperty(sourceSM.id) && targetThreat!=undefined){
                         if(threat!=targetThreat){
                             threat=targetThreat;
                             i=0;
@@ -974,7 +980,7 @@ async function generateSerenaModel(req) {
                     let targetSC={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
 
                     serenaModel.elements.push(targetSC);
-                    dicRequirementElement[targetSC.id]=targetSC;
+                    if(dicRequirementElement.hasOwnProperty(targetSC.id))dicRequirementElement[targetSC.id]=targetSC;
                     
                 }
                 
