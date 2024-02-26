@@ -1039,11 +1039,13 @@ async function generateSerenaModel(req) {
         }
         let opers=serenaModel.elements.filter(x => x.type === "Operationalization");
         let softGoals=serenaModel.elements.filter(x => x.type === "SoftGoal");
+        i=0;
         serenaModel.elements.forEach((elm) => {
-            i=0;
+           
             if(elm.type=="Cardinality"){
                 softGoals.forEach(sg =>{
                     //console.log(sg)
+
                     let claim=serenaModelUtils.createClaim("C"+(i+1),750,fy+(i*100),fw,fh);
                     serenaModel.elements.push(claim);
                     let relationship=serenaModelUtils.createRelationship(claim,sg,"String","","","")
@@ -1055,7 +1057,7 @@ async function generateSerenaModel(req) {
                             serenaModel.relationships.push(relationship);
                         }
                         //console.log((treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)))
-                        if(treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)){
+                        if(treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id) && serenaModel.relationships.some((rel) => (rel.type=="Operationalization_Claim_Goal" && rel.sourceId==op.id && rel.targetId==elm.id))){
                             let vuln_oper = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Vulnerability_Operationalization" && rel1.targetId==op.id));
                             //console.log(vuln_oper)
                             let threat_vuln = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Threat_Vulnerability" && vuln_oper.some( vo=>( vo.sourceId===rel1.targetId))));
