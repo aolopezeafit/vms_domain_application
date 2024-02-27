@@ -19,5 +19,12 @@ function getTextBetweenWords(inputText, startWord, endWord) {
     return extractedText;
   }
 
+  function normalizeTextList(text) { 
+    let entries = text.split(","); 
+    let trimmedEntries = entries.map(entry => entry.trim()); 
+    let result = trimmedEntries.join(","); 
+    return result;
+  }
+
   //export methods
-  module.exports = { getTextBetweenWords };
+  module.exports = { getTextBetweenWords, normalizeTextList};

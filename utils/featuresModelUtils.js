@@ -24,6 +24,52 @@ function createConcreteFeature(name, x, y, w, h) {
     return feature;
 }
 
+function createBundle(name, minValue, maxValue, x, y, w, h) {
+    let bundle = {
+        "id": generateUUID(),
+        "type": "Bundle",
+        "name": name,
+        "x": x,
+        "y": y,
+        "width": w,
+        "height": h,
+        "parentId": null,
+        "properties": [
+            {
+                "id": generateUUID(),
+                "name": "Type",
+                "value": "Range",
+                "type": "String",
+                "custom": false,
+                "display": true,
+                "comment": "type options",
+                "possibleValues": "And,Or,Xor,Range"
+            },
+            {
+                "id": generateUUID(),
+                "name": "RangeMin",
+                "value": "" + minValue,
+                "type": "String",
+                "linked_property": "Type",
+                "linked_value": "Range",
+                "custom": false,
+                "display": true
+            },
+            {
+                "id": generateUUID(),
+                "name": "RangeMax",
+                "value": "" + maxValue,
+                "type": "String",
+                "linked_property": "Type",
+                "linked_value": "Range",
+                "custom": false,
+                "display": true
+            }
+        ]
+    }
+    return bundle;
+}
+
 function createFeature(type, name, x, y, w, h) {
     let feature = {
         "id": generateUUID(),
@@ -114,6 +160,6 @@ function generateUUID() {
 
 //export methods
 module.exports = {
-    createFeatureModel, createRootFeature, createAbstractFeature, createConcreteFeature, createProperty,
+    createFeatureModel, createRootFeature, createAbstractFeature, createConcreteFeature, createBundle, createProperty,
     createRelationshipFeature_Feature
 };

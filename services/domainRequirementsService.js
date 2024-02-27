@@ -1,8 +1,10 @@
 var projectUtils = require('../utils/projectUtils');
 var featuresModelUtils = require('../utils/featuresModelUtils');
+var featuresModelService = require('./featureModelService.js');
 var textUtils = require('../utils/textUtils');
 var secretGraph = require('./secretGraph.json');
 var { Graph } = require('../utils/graph.js');
+const { positiveUniversalMeasureValue } = require('docx');
 
 async function generateFeaturesModel(req) {
     let project = req.body.data.project;
@@ -14,8 +16,8 @@ async function generateFeaturesModel(req) {
 
     let fw = 100;
     let fh = 66;
-    let fx = 512;
-    let fy = 80;
+    let fx = 100;
+    let fy = 100;
     let fdx = 25;
     let fdy = 100;
     let fi = 0
@@ -48,18 +50,42 @@ async function generateFeaturesModel(req) {
 
     let graph = loadGraph();
     //showPaths(graph);
+    fx += (fw + fdx)
+    let requirements = getRequirements(graph, domainRequirementsModel, requirementsOfAttributes);
+    createFeatures(featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy);
+    createConstraints(featuresModel, requirements, dicRequirementFeature)
 
-    let requirements = getRequirements(graph, domainRequirementsModel, requirementsOfAttributes); 
-    createFeatures(featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy); 
+    featuresModelService.organize(featuresModel);
+
     project.productLines[0].domainEngineering.models.push(featuresModel);
     return project;
+}
+
+function containsAllFromPart(parts, indexes) {
+    for (let i = 0; i < indexes.length; i++) {
+        const index = indexes[i];
+        let exists = false
+        for (var key in parts) {
+            var part = parts[key];
+            if (part.tag == index) {
+                exists = true;
+            }
+        }
+        if (!exists) {
+            return false
+        }
+    }
+    return true;
 }
 
 function getValueFromPart(parts, indexes) {
     for (let i = 0; i < indexes.length; i++) {
         const index = indexes[i];
-        if (parts[index]) {
-            return parts[index].word;
+        for (var key in parts) {
+            var part = parts[key];
+            if (part.tag == index) {
+                return part.word;
+            }
         }
     }
     return null;
@@ -78,7 +104,7 @@ function getRequirements(graph, domainRequirementsModel) {
                 description: description,
                 secret: parts
             }
-            ret[element] = item;
+            ret[element.id] = item;
         }
     }
     return ret;
@@ -88,58 +114,128 @@ function createFeatures(featuresModel, requirements, dicRequirementFeature, px, 
     let pi = 0
     for (var key in requirements) {
         if (requirements.hasOwnProperty(key)) {
-            requirement = requirements[key];
+            let requirement = requirements[key];
+            if (requirement.description.includes("choose")) {
+                let jjj = 0;
+            }
             let secret = requirement.secret;
-            let name = null;
             if (secret) {
-                let verb = getValueFromPart(secret, ["_78", "_43"]);
-                let obj = getValueFromPart(secret, ["_58"]);
+                if (containsAllFromPart(secret, ["1C_IN", "6E_BETWEEN"])) {
+                    continue;
+                }
+                let name = null;
+                let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
+                let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
                 if (verb) {
                     name = verb;
                     if (obj) {
                         name += ' ' + obj;
                     }
                 }
-            }
-            if (name) {
-                let feature = featuresModelUtils.createConcreteFeature(name, px + (pi * (pw + pdx)) + pdx, py + ph + pdy, pw, ph);
-                featuresModel.elements.push(feature);
-                dicRequirementFeature[element.id] = feature;
-                pi++;
+                if (name) {
+                    //let feature = featuresModelUtils.createConcreteFeature(name, (pi * (pw + pdx)) + pdx, py + ph + pdy, pw, ph);
+                    let feature = featuresModelUtils.createConcreteFeature(name, px + (pi * (pw + pdx)) + pdx, py, pw, ph);
+                    featuresModel.elements.push(feature);
+                    dicRequirementFeature[key] = feature;
+                    pi++;
+                } 
             }
         }
     }
 }
 
-function createConstraints(graph, featuresModel, domainRequirementsModel, requirementsOfAttributes, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy) {
-    let initialNodes = graph.findInitialNodes();
+function createConstraints(featuresModel, requirements, dicRequirementFeature) {
     let rootFeature = featuresModel.elements[0];
-    for (let m = 0; m < domainRequirementsModel.elements.length; m++) {
-        let element = domainRequirementsModel.elements[m];
-        if (element.type == "FunctionalRequirement" && !requirementsOfAttributes.includes(element)) {
-            let description = projectUtils.findElementProperty(element, "Description").value;
-            let parts = getSecretParts(graph, initialNodes, description);
-            if (parts) {
-                let type = null;
-                if (parts["_70"]) {
-                    type = "Mandatory";
+    for (var key in requirements) {
+        if (requirements.hasOwnProperty(key)) {
+            let requirement = requirements[key];
+            if (requirement.description.includes("font color")) {
+                let jjj = 0;
+            }
+            let secret = requirement.secret;
+            if (secret) {
+                let parentFeature = rootFeature;
+                if (containsAllFromPart(secret, ["1C_IN", "6E_BETWEEN"])) {
+                    if (!containsAllFromPart(secret, ["8_<Additional object details>"])) {
+                        let name = null;
+                        let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
+                        let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
+                        if (verb) {
+                            name = verb;
+                            if (obj) {
+                                name += ' ' + obj;
+                            }
+                        }
+                        if (name) {
+                            let minValue=1;
+                            let maxValue=2;
+                            let bundle = featuresModelUtils.createBundle(name, minValue, maxValue, 200, 100, 100, 50);
+                            featuresModel.elements.push(bundle);
+                            dicRequirementFeature[key] = bundle; 
+                        }
+                        continue;
+                    }
+                    else{
+                        let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                        let propertyName= getValueFromPart(secret, ["6_<Object/Asset>"])
+                        let strOptions=getValueFromPart(secret, ["8_<Additional object details>"]); 
+                        let possibleValues= textUtils.normalizeTextList(strOptions);
+                        parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+                        let property= featuresModelUtils.createProperty(propertyName, "String", null, possibleValues); 
+                        parentFeature.properties.push(property);
+                    }
                 }
-                if (parts["_71"]) {
-                    type = "Optional";
+
+
+
+
+                let valueIn = getValueFromPart(secret, ["1C_IN"]);
+                let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                if (valueIn && valueFeatureIncluded) {
+                    parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+                }
+                if (!parentFeature) {
+                    continue;
+                }
+
+                let type = null;
+                let value = getValueFromPart(secret, ["2_ALL"]);
+                if (value) {
+                    type = "Mandatory";
+                } else {
+                    let value = getValueFromPart(secret, ["2_SOME"]);
+                    if (value) {
+                        type = "Optional";
+                    }
                 }
                 if (type) {
-                    let feature = dicRequirementFeature[element.id];
-                    let relationship = featuresModelUtils.createRelationshipFeature_Feature(rootFeature, feature, type);
-                    featuresModel.relationships.push(relationship);
+                    let feature = dicRequirementFeature[key];
+                    if (feature) {
+                        let relationship = featuresModelUtils.createRelationshipFeature_Feature(parentFeature, feature, type);
+                        featuresModel.relationships.push(relationship);
+                    }
                 }
             }
         }
     }
+}
+
+function getFeatureByName(name, dicRequirementFeature) {
+    for (var key in dicRequirementFeature) {
+        let feature = dicRequirementFeature[key];
+        if (feature.name == name) {
+            return feature;
+        }
+    }
+    return null;
 }
 
 function getSecretParts(graph, initialNodes, description) {
-    let parts = null;
+    if (description.includes("choose")) {
+        let jjj = 0;
+    }
     let words = NormalizeWords(description);
+    let coincidentPaths = [];
     for (let i = 0; i < initialNodes.length; i++) {
         const initialNode = initialNodes[i];
         let token = getTokenFromNode(initialNode);
@@ -153,14 +249,37 @@ function getSecretParts(graph, initialNodes, description) {
                 const path = paths[p];
                 let candidateParts = checkPath(path, words);
                 if (candidateParts != null) {
-                    return candidateParts;
+                    coincidentPaths.push(candidateParts);
                 }
             }
         }
     }
-
-    return parts;
+    if (coincidentPaths.length > 0) {
+        let p = 0;
+        let maxL = 0;
+        for (let c = 0; c < coincidentPaths.length; c++) {
+            const coincidentPath = coincidentPaths[c];
+            let l = countElements(coincidentPath);
+            if (maxL < l) {
+                maxL = l;
+                p = c;
+            }
+        }
+        return coincidentPaths[p];
+    }
+    return null;
 }
+
+function countElements(obj) {
+    let count = 0;
+    for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            count++;
+        }
+    }
+    return count;
+}
+
 
 function checkPath(path, words) {
     showPath(path);
@@ -182,8 +301,10 @@ function checkPath(path, words) {
         const word = words[w];
         let index = null;
         let token = null;
+        let tag = null;
         while (true) {
             index = path[t];
+            tag = getTagFromNode(index);
             token = getTokenFromNode(index);
             if (token != "//") {
                 break;
@@ -200,10 +321,12 @@ function checkPath(path, words) {
                 }
             }
         }
+
         if (token == word) {
             let item = {
                 word: word,
                 key: token,
+                tag: tag + '_' + token,
                 id: index
             }
             candidateParts['_' + index] = item;
@@ -218,6 +341,7 @@ function checkPath(path, words) {
                     let item = {
                         word: word,
                         key: token,
+                        tag: tag + '_' + token,
                         id: index
                     }
                     candidateParts['_' + index] = item;
@@ -336,6 +460,11 @@ function getTokenFromNode(id) {
     return word;
 }
 
+function getTagFromNode(id) {
+    let tag = secretGraph.nodes[id].tag;
+    return tag;
+}
+
 function NormalizeWords(text) {
     let str = text.toUpperCase();
     if (!str.endsWith(".")) {
@@ -344,6 +473,8 @@ function NormalizeWords(text) {
     str = str.replace(/\./g, ' . ');
     str = str.replace(/\(/g, ' ( ');
     str = str.replace(/\)/g, ' ) ');
+    str = str.replace(/\r/g, '');
+    str = str.replace(/\n/g, '');
     str = str.trim();
     while (str.includes('  ')) {
         str = replaceDoubleSpacesWithSingle(str);
