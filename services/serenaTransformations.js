@@ -906,13 +906,13 @@ async function generateSerenaModel(req) {
             const rel = treatmentSerenaModel.relationships[r];
             if(rel.type!="SecurityMechanism_SecurityClaim"){
                 if(rel.type=="Vulnerability_Operationalization"){
-                    console.log(rel)
+                    //console.log(rel)
                     let rel1={...rel};
                     serenaModel.relationships.push(rel1);
                     let targetOp={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
-                    console.log(targetOp)
+                    //console.log(targetOp)
                     let sourceVul={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    console.log(sourceVul)
+                    //console.log(sourceVul)
                     if(dicRequirementElement.hasOwnProperty(targetOp.id)) targetOp=dicRequirementElement[targetOp.id];
                     if(!dicRequirementElement.hasOwnProperty(sourceVul.id)){
                         if(op!=targetOp){
@@ -1040,9 +1040,33 @@ async function generateSerenaModel(req) {
         let opers=serenaModel.elements.filter(x => x.type === "Operationalization");
         let softGoals=serenaModel.elements.filter(x => x.type === "SoftGoal");
         i=0;
+        let card=[];
         serenaModel.elements.forEach((elm) => {
            
             if(elm.type=="Cardinality"){
+                
+                let op=serenaModel.relationships.filter(x => x.targetId==elm.id);
+                let f=false;
+                //console.log(op)
+                loop1: for(var c in card){
+                   // console.log(c)
+                   loop2:  for(var r=0;r<card[c].length;r++){
+                        console.log(card[c])
+                        f=op.some((p)=>{
+                            console.log(p.sourceId)
+                            console.log(card[c][r].sourceId)
+                            return p.sourceId==card[c][r].sourceId;
+                        });
+                        console.log(f);
+                        if (f==false) break loop2;
+                        else break loop1;
+                    }
+                }
+                
+                console.log(f)
+                card[elm.id]=op;
+                //console.log(card)
+                if(f==false){
                 softGoals.forEach(sg =>{
                     //console.log(sg)
 
@@ -1117,6 +1141,7 @@ async function generateSerenaModel(req) {
 
 
                 });
+            }
 
                 //console.log(elm)
                 //relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,----,---,--,-,=","Value","")
