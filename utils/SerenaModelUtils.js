@@ -4,7 +4,8 @@ function createSERENAModel(name) {
         name: name,
         type: 'SERENA',
         elements: [],
-        relationships: []
+        relationships: [],
+        constraints:''
     }
     return model;
 }
