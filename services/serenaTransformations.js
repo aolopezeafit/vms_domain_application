@@ -464,7 +464,7 @@ try{
         //console.log(element)
         if(element.metadata) dicRequirementElement[element.metadata.sourceRequirementId]=element;
         else dicRequirementElement[element.id]=element;
-        //console.log(dicRequirementElement)
+        
         }
     }
      for (let r = 0; r < appRequirementsModel.relationships.length; r++) {
@@ -482,6 +482,7 @@ try{
                     //console.log(dicRequirementElement.hasOwnProperty(sourcerequirement.id))
                     if(dicRequirementElement.hasOwnProperty(sourcerequirement.id)){ 
                         oper=dicRequirementElement[sourcerequirement.id];
+                      
                         
                      }
                     else {
@@ -490,6 +491,7 @@ try{
                         riskModel.elements.push(oper);
                         //requirementsOfAttributes.push(sourcerequirement);
                         dicRequirementElement[sourcerequirement.id]=oper;
+                        
                         
                         
                          
@@ -579,18 +581,22 @@ try{
             //requirementsOfAttributes.push(targetrequirement);
             dicRequirementElement[element.id]=securityCriteria;
             i=i+1;
+            
         }
 
     }
     
     }
-
-    console.log(requirementsOper)
+    //console.log(dicRequirementElement)
+    //console.log(requirementsOper)
     Object.values(dicRequirementElement).forEach((element) => {
+        
         sourceId=Object.keys(dicRequirementElement).find(key => dicRequirementElement[key] === element)
         if(element.type=="Operationalization"){
+           //console.log(requirementsOper)
+           console.log(element);
             if(!requirementsOper.hasOwnProperty(element.id)){
-                console.log(element);
+                
                 vuln= serenaModelUtils.createVulnerability("Vulnerability "+ (i), 170,20+(i*50),fw,fh);
                 vuln.metadata={'sourceRequirementId':sourceId};   
                 riskModel.elements.push(vuln);
@@ -604,10 +610,10 @@ try{
                 //dupilcates the relationships needs to be fixed
                 riskModel.elements.forEach((el) => {
                     if(el.type=="Threat"){
-                        console.log(el)
+                        //console.log(el)
                         riskModel.elements.forEach((elm) => {
                             if(elm.type=="SecurityClaim"){
-                                console.log(elm)
+                                //console.log(elm)
                                 relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,--,-,=","Value","")
                                 riskModel.relationships.push(relationship);
                             }
@@ -617,12 +623,12 @@ try{
                 });
                 
                 i=i+1;
-                requirementsOper[oper.id]=oper;
+                //requirementsOper[oper.id]=oper;
             }
         }
 
     });
-    console.log(requirementsOper)
+    //console.log(requirementsOper)
 }catch(e){
     console.log(e)
 }
@@ -900,11 +906,14 @@ async function generateSerenaModel(req) {
             const rel = treatmentSerenaModel.relationships[r];
             if(rel.type!="SecurityMechanism_SecurityClaim"){
                 if(rel.type=="Vulnerability_Operationalization"){
+                    //console.log(rel)
                     let rel1={...rel};
                     serenaModel.relationships.push(rel1);
                     let targetOp={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
+                    //console.log(targetOp)
                     let sourceVul={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetOp=dicRequirementElement[targetOp.id];
+                    //console.log(sourceVul)
+                    if(dicRequirementElement.hasOwnProperty(targetOp.id)) targetOp=dicRequirementElement[targetOp.id];
                     if(!dicRequirementElement.hasOwnProperty(sourceVul.id)){
                         if(op!=targetOp){
                             op=targetOp;
@@ -924,9 +933,12 @@ async function generateSerenaModel(req) {
                     let rel1={...rel};
                     serenaModel.relationships.push(rel1);
                     let targetVul={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
+                    //console.log(targetVul)
                     let sourceThreat={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetVul=dicRequirementElement[targetVul.id];
-                    if(!dicRequirementElement.hasOwnProperty(sourceThreat.id)){
+                    if(dicRequirementElement.hasOwnProperty(targetVul.id))targetVul=dicRequirementElement[targetVul.id];
+                    //console.log(targetVul)
+                   // console.log(sourceThreat)
+                    if(!dicRequirementElement.hasOwnProperty(sourceThreat.id) && targetVul!=undefined){
                         if(vul!=targetVul){
                             vul=targetVul;
                             i=0;
@@ -946,8 +958,8 @@ async function generateSerenaModel(req) {
                     serenaModel.relationships.push(rel1);
                     let targetThreat={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
                     let sourceSM={...projectUtils.findModelElement(treatmentSerenaModel,rel1.sourceId)};
-                    targetThreat=dicRequirementElement[targetThreat.id];
-                    if(!dicRequirementElement.hasOwnProperty(sourceSM.id)){
+                    if(dicRequirementElement.hasOwnProperty(targetThreat.id))targetThreat=dicRequirementElement[targetThreat.id];
+                    if(!dicRequirementElement.hasOwnProperty(sourceSM.id) && targetThreat!=undefined){
                         if(threat!=targetThreat){
                             threat=targetThreat;
                             i=0;
@@ -968,7 +980,7 @@ async function generateSerenaModel(req) {
                     let targetSC={...projectUtils.findModelElement(treatmentSerenaModel,rel1.targetId)};
 
                     serenaModel.elements.push(targetSC);
-                    dicRequirementElement[targetSC.id]=targetSC;
+                    if(dicRequirementElement.hasOwnProperty(targetSC.id))dicRequirementElement[targetSC.id]=targetSC;
                     
                 }
                 
@@ -1027,11 +1039,37 @@ async function generateSerenaModel(req) {
         }
         let opers=serenaModel.elements.filter(x => x.type === "Operationalization");
         let softGoals=serenaModel.elements.filter(x => x.type === "SoftGoal");
+        i=0;
+        let card=[];
         serenaModel.elements.forEach((elm) => {
-            i=0;
+           
             if(elm.type=="Cardinality"){
+                
+                let op=serenaModel.relationships.filter(x => x.targetId==elm.id);
+                let f=false;
+                //console.log(op)
+                loop1: for(var c in card){
+                   // console.log(c)
+                   loop2:  for(var r=0;r<card[c].length;r++){
+                        console.log(card[c])
+                        f=op.some((p)=>{
+                            console.log(p.sourceId)
+                            console.log(card[c][r].sourceId)
+                            return p.sourceId==card[c][r].sourceId;
+                        });
+                        console.log(f);
+                        if (f==false) break loop2;
+                        else break loop1;
+                    }
+                }
+                
+                console.log(f)
+                card[elm.id]=op;
+                //console.log(card)
+                if(f==false){
                 softGoals.forEach(sg =>{
                     //console.log(sg)
+
                     let claim=serenaModelUtils.createClaim("C"+(i+1),750,fy+(i*100),fw,fh);
                     serenaModel.elements.push(claim);
                     let relationship=serenaModelUtils.createRelationship(claim,sg,"String","","","")
@@ -1043,7 +1081,7 @@ async function generateSerenaModel(req) {
                             serenaModel.relationships.push(relationship);
                         }
                         //console.log((treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)))
-                        if(treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id)){
+                        if(treatmentSerenaModel.elements.some(x => x.type=="SoftGoal" && x.id==sg.id) && serenaModel.relationships.some((rel) => (rel.type=="Operationalization_Claim_Goal" && rel.sourceId==op.id && rel.targetId==elm.id))){
                             let vuln_oper = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Vulnerability_Operationalization" && rel1.targetId==op.id));
                             //console.log(vuln_oper)
                             let threat_vuln = treatmentSerenaModel.relationships.filter(rel1 => (rel1.type=="Threat_Vulnerability" && vuln_oper.some( vo=>( vo.sourceId===rel1.targetId))));
@@ -1103,6 +1141,7 @@ async function generateSerenaModel(req) {
 
 
                 });
+            }
 
                 //console.log(elm)
                 //relationship=serenaModelUtils.createRelationship(el,elm,"String"," ,----,---,--,-,=","Value","")
