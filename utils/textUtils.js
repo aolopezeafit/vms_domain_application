@@ -20,7 +20,8 @@ function getTextBetweenWords(inputText, startWord, endWord) {
   }
 
   function normalizeTextList(text) { 
-    let entries = text.split(","); 
+    let str = text.replace(/;/g, ',');
+    let entries = str.split(","); 
     let trimmedEntries = entries.map(entry => entry.trim()); 
     let result = trimmedEntries.join(","); 
     return result;

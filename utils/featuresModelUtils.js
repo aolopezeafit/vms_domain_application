@@ -121,7 +121,22 @@ function createRelationshipFeature_Feature(source, target, type) {
     return relationship;
 }
 
-function createProperty(name, type, value, possibleValues){
+function createRelationship(source, target, type) {
+    let relationship = {
+        "id": generateUUID(),
+        "type": type,
+        "name": "_",
+        "sourceId": source.id,
+        "targetId": target.id,
+        "points": [],
+        "min": 0,
+        "max": 9999999,
+        "properties": []
+    }
+    return relationship;
+}
+
+function createProperty(name, type, value, possibleValues, constraint){
   let property=  {
         "id": generateUUID(),
         "name": name,
@@ -136,7 +151,8 @@ function createProperty(name, type, value, possibleValues){
         "possibleValues": possibleValues,
         "possibleValuesLinks": {},
         "minCardinality": "",
-        "maxCardinality": ""
+        "maxCardinality": "",
+        "constraint": constraint
     };
     return property;
 }
@@ -161,5 +177,5 @@ function generateUUID() {
 //export methods
 module.exports = {
     createFeatureModel, createRootFeature, createAbstractFeature, createConcreteFeature, createBundle, createProperty,
-    createRelationshipFeature_Feature
+    createRelationshipFeature_Feature, createRelationship
 };

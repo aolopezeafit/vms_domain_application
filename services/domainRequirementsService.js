@@ -1,5 +1,6 @@
 var projectUtils = require('../utils/projectUtils');
 var featuresModelUtils = require('../utils/featuresModelUtils');
+var domainRequirementsModelUtils = require('../utils/domainRequirementsModelUtils.js');
 var featuresModelService = require('./featureModelService.js');
 var textUtils = require('../utils/textUtils');
 var secretGraph = require('./secretGraph.json');
@@ -52,8 +53,8 @@ async function generateFeaturesModel(req) {
     //showPaths(graph);
     fx += (fw + fdx)
     let requirements = getRequirements(graph, domainRequirementsModel, requirementsOfAttributes);
-    createFeatures(featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy);
-    createConstraints(featuresModel, requirements, dicRequirementFeature)
+    createFeatures(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy);
+    createConstraints(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature)
 
     featuresModelService.organize(featuresModel);
 
@@ -110,7 +111,7 @@ function getRequirements(graph, domainRequirementsModel) {
     return ret;
 }
 
-function createFeatures(featuresModel, requirements, dicRequirementFeature, px, py, pw, ph, pdx, pdy) {
+function createFeatures(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature, px, py, pw, ph, pdx, pdy) {
     let pi = 0
     for (var key in requirements) {
         if (requirements.hasOwnProperty(key)) {
@@ -138,13 +139,13 @@ function createFeatures(featuresModel, requirements, dicRequirementFeature, px, 
                     featuresModel.elements.push(feature);
                     dicRequirementFeature[key] = feature;
                     pi++;
-                } 
+                }
             }
         }
     }
 }
 
-function createConstraints(featuresModel, requirements, dicRequirementFeature) {
+function createConstraints(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature) {
     let rootFeature = featuresModel.elements[0];
     for (var key in requirements) {
         if (requirements.hasOwnProperty(key)) {
@@ -155,64 +156,121 @@ function createConstraints(featuresModel, requirements, dicRequirementFeature) {
             let secret = requirement.secret;
             if (secret) {
                 let parentFeature = rootFeature;
-                if (containsAllFromPart(secret, ["1C_IN", "6E_BETWEEN"])) {
-                    if (!containsAllFromPart(secret, ["8_<Additional object details>"])) {
-                        let name = null;
-                        let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
-                        let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
-                        if (verb) {
-                            name = verb;
-                            if (obj) {
-                                name += ' ' + obj;
+                if (containsAllFromPart(secret, ["1C_IN"])) {
+                    if (containsAllFromPart(secret, ["6E_BETWEEN"])) {
+                        if (!containsAllFromPart(secret, ["8_<Additional object details>"])) {
+                            let name = null;
+                            let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
+                            let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
+                            if (verb) {
+                                name = verb;
+                                if (obj) {
+                                    name += ' ' + obj;
+                                }
+                            }
+                            if (name) {
+                                let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"])) ;
+                                let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
+                                let bundle = featuresModelUtils.createBundle(name, minValue, maxValue, 200, 100, 100, 50);
+                                featuresModel.elements.push(bundle);
+                                dicRequirementFeature[key] = bundle;
+
+                                let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                                parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+
+                                let type = parentFeature.type + "_Bundle";
+                                let relationship = featuresModelUtils.createRelationship(parentFeature, bundle, type);
+                                featuresModel.relationships.push(relationship);
                             }
                         }
-                        if (name) {
-                            let minValue=1;
-                            let maxValue=2;
-                            let bundle = featuresModelUtils.createBundle(name, minValue, maxValue, 200, 100, 100, 50);
-                            featuresModel.elements.push(bundle);
-                            dicRequirementFeature[key] = bundle; 
+                        else {
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                            let propertyName = getValueFromPart(secret, ["6_<Object/Asset>"])
+                            let strOptions = getValueFromPart(secret, ["8_<Additional object details>"]);
+                            let possibleValues = textUtils.normalizeTextList(strOptions);
+                            let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"])) ;
+                            let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
+                            let constraint='[' + minValue + '..' + maxValue + ']';
+                            parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+                            let property = featuresModelUtils.createProperty(propertyName, "String", "Undefined", possibleValues, constraint);
+                            parentFeature.properties.push(property);
                         }
                         continue;
                     }
-                    else{
-                        let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
-                        let propertyName= getValueFromPart(secret, ["6_<Object/Asset>"])
-                        let strOptions=getValueFromPart(secret, ["8_<Additional object details>"]); 
-                        let possibleValues= textUtils.normalizeTextList(strOptions);
-                        parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
-                        let property= featuresModelUtils.createProperty(propertyName, "String", null, possibleValues); 
-                        parentFeature.properties.push(property);
+                    else {
+                        let sourceRequirementId = requirement.element.id;
+                        let refinedRequirements = domainRequirementsModelUtils.findTargetRequirements(domainRequirementsModel, sourceRequirementId, "FunctionalRequirement_FunctionalRequirement", "Refinement")
+                        if (refinedRequirements.length == 0) {
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                            parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+                        } else {
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                            parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
+                            for (let r = 0; r < refinedRequirements.length; r++) {
+                                const refinedRequirement = refinedRequirements[r];
+                                let element = dicRequirementFeature[refinedRequirement.id];
+                                if (element) {
+                                    parentFeature = element;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
-
-
-
-                let valueIn = getValueFromPart(secret, ["1C_IN"]);
-                let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
-                if (valueIn && valueFeatureIncluded) {
-                    parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
-                }
                 if (!parentFeature) {
                     continue;
                 }
 
-                let type = null;
-                let value = getValueFromPart(secret, ["2_ALL"]);
-                if (value) {
-                    type = "Mandatory";
-                } else {
-                    let value = getValueFromPart(secret, ["2_SOME"]);
-                    if (value) {
-                        type = "Optional";
+                if (parentFeature.type == "Bundle") {
+                    let type = "Bundle_Feature";
+                    let feature = dicRequirementFeature[key];
+                    if (feature) {
+                        let relationship = featuresModelUtils.createRelationship(parentFeature, feature, type);
+                        featuresModel.relationships.push(relationship);
                     }
-                }
-                if (type) {
+                } else {
+                    let type = null;
+                    let value = getValueFromPart(secret, ["2_ALL"]);
+                    if (value) {
+                        type = "Mandatory";
+                    } else {
+                        let value = getValueFromPart(secret, ["2_SOME"]);
+                        if (value) {
+                            type = "Optional";
+                        }
+                    }
                     let feature = dicRequirementFeature[key];
                     if (feature) {
                         let relationship = featuresModelUtils.createRelationshipFeature_Feature(parentFeature, feature, type);
                         featuresModel.relationships.push(relationship);
+                    }
+                }
+
+                if (true) {
+                    let feature = dicRequirementFeature[key];
+                    if (feature) {
+                        let sourceRequirementId = requirement.element.id;
+                        let conflictingRequirements = domainRequirementsModelUtils.findTargetRequirements(domainRequirementsModel, sourceRequirementId, "FunctionalRequirement_FunctionalRequirement", "Conflicting")
+                        for (let i = 0; i < conflictingRequirements.length; i++) {
+                            const conflictingRequirement = conflictingRequirements[i];
+                            let element = dicRequirementFeature[conflictingRequirement.id];
+                            if (element) {
+                                let relationship = featuresModelUtils.createRelationshipFeature_Feature(feature, element, "Excludes");
+                                featuresModel.relationships.push(relationship);
+                            }
+                        }
+
+                        
+                        let dependencyRequirements = domainRequirementsModelUtils.findTargetRequirements(domainRequirementsModel, sourceRequirementId, "FunctionalRequirement_FunctionalRequirement", "Dependency")
+                        for (let i = 0; i < dependencyRequirements.length; i++) {
+                            const dependencyRequirement = dependencyRequirements[i];
+                            let element = dicRequirementFeature[dependencyRequirement.id];
+                            if (element) {
+                                let relationship = featuresModelUtils.createRelationshipFeature_Feature(feature, element, "Includes");
+                                featuresModel.relationships.push(relationship);
+                            }
+                        }
                     }
                 }
             }
