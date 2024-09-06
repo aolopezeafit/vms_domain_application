@@ -6,6 +6,7 @@ var domainRequirementsService = require('./services/domainRequirementsService');
 var mapModelService = require('./services/mapModelService');
 var graphModelService = require('./services/graphModelService');
 var serenaTransfrmations = require('./services/serenaTransformations.js');
+var applicationGenerationService = require('./services/applicationGenerationService.js');
 var autocompleteService = require("./services/autocompleteService");
 var additionalRequirements = require('./services/additionalRequirements');
 var relatedRequirementsService = require('./services/relatedRequirementsService');
@@ -337,6 +338,25 @@ app.post('/generateJSONFromGraphModel', async function (req, res, next) {
 		}  
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(data)); 
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateApplicationFromFeatureModel', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await applicationGenerationService.generateApplicationFromFeatureModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
     } catch (error) {
         res.status(400).send(JSON.stringify(error));
     }

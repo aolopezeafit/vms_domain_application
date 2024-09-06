@@ -1,3 +1,24 @@
+const { Application } = require("../entities/application");
+
+function createApplication(name){
+    let uuid=generateUUID();
+    let application=new Application(uuid, name);
+    return application;
+}
+
+function findProductLine(project, modelId){ 
+    for (let p = 0; p < project.productLines.length; p++) {
+        const productLine = project.productLines[p];
+        for (let m = 0; m < productLine.domainEngineering.models.length; m++) {
+            let plmodel = productLine.domainEngineering.models[m]; 
+            if (plmodel.id == modelId) {
+                return productLine;
+            }
+        }
+    }
+    return null;
+}
+
 function findModel(project, modelId){
     var domain ='';
     let model = null;
@@ -123,5 +144,21 @@ function findElementProperty(element, propertyName){
     return null;
 }
 
+function generateUUID() {
+    var d = new Date().getTime();//Timestamp
+    var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16;//random number between 0 and 16
+        if (d > 0) {//Use timestamp until depleted
+            r = (d + r) % 16 | 0;
+            d = Math.floor(d / 16);
+        } else {//Use microseconds since page-load if supported
+            r = (d2 + r) % 16 | 0;
+            d2 = Math.floor(d2 / 16);
+        }
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
 //export methods
-module.exports = { findModel, findModelElement, removeModelElement, findElementProperty , findApplicationModel, findApplicationId, findModelByType};
+module.exports = { findModel, findModelElement, removeModelElement, findElementProperty , findApplicationModel, findApplicationId, findModelByType, createApplication, findProductLine};
