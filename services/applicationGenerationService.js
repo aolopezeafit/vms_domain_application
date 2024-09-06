@@ -7,7 +7,17 @@ async function generateApplicationFromFeatureModel(req) {
     let project = req.body.data.project;
     let modelId = req.body.data.modelSelectedId;
     let productLine = projectUtils.findProductLine(project, modelId);
-    let application = projectUtils.createApplication("Application 1");
+    let suffix=1; 
+    while (true) {
+       let application=projectUtils.findApplicationByName(project, "Application " + suffix);
+       if (!application) {
+         break;
+       }else{
+         suffix+=1;
+       }
+    }
+    let applicationName="Application " + suffix;
+    let application = projectUtils.createApplication(applicationName);
     productLine.applicationEngineering.applications.push(application);
 
     let fm = projectUtils.findModel(project, modelId);
@@ -27,7 +37,7 @@ function createApplicationFeatureModel(domainFeatureModel) {
         for (let p = 0; p < element.properties.length; p++) {
             const property = element.properties[p];
             if (property.name == "Selected") {
-                if (property.value == "Selected") {
+                if (property.value == "Selected" || property.value == "SelectedForced") {
                     element.properties.splice(p, 1);
                     dicElements[element.id] = element.type;
                 } else {
