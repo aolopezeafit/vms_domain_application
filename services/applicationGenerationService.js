@@ -31,6 +31,7 @@ function createApplicationFeatureModel(domainFeatureModel) {
     applicationFeatureModel.name = "Application feature tree";
     applicationFeatureModel.type = "Application feature tree";
     applicationFeatureModel.id = generateId();
+    applicationFeatureModel.sourceModelIds=[domainFeatureModel.id];
     let dicElements = [];
     for (let e = applicationFeatureModel.elements.length - 1; e >= 0; e--) {
         const element = applicationFeatureModel.elements[e];
