@@ -35,6 +35,12 @@ function createApplicationFeatureModel(domainFeatureModel) {
     let dicElements = [];
     for (let e = applicationFeatureModel.elements.length - 1; e >= 0; e--) {
         const element = applicationFeatureModel.elements[e];
+        element.sourceModelElements=[
+            {
+                modelId: domainFeatureModel.id,
+                elementId: element.id
+            }
+        ]
         for (let p = 0; p < element.properties.length; p++) {
             const property = element.properties[p];
             if (property.name == "Selected") {
