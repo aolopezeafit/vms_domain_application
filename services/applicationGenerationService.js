@@ -3,6 +3,10 @@ var serenaModelUtils = require('../utils/SerenaModelUtils');
 var textUtils = require('../utils/textUtils');
 var modelUtils = require('../utils/modelUtils');
 
+async function generateApplicationFromFeatureModelWithoutAttributes(req) {
+   return generateApplicationFromFeatureModel(req);
+}
+
 async function generateApplicationFromFeatureModel(req) {
     let project = req.body.data.project;
     let modelId = req.body.data.modelSelectedId;
@@ -24,7 +28,7 @@ async function generateApplicationFromFeatureModel(req) {
     let fmApplication = createApplicationFeatureModel(fm);
     application.models.push(fmApplication);
     return project;
-}
+} 
 
 function createApplicationFeatureModel(domainFeatureModel) {
     let applicationFeatureModel = modelUtils.cloneModel(domainFeatureModel);
@@ -53,6 +57,13 @@ function createApplicationFeatureModel(domainFeatureModel) {
                 }
             }
         }
+        // let property={
+        //     name: 'Core',
+        //     value: true,
+        //     custom: false,
+        //     visible: false
+        // }
+        // element.properties.push(property);
     }
     for (let e = applicationFeatureModel.elements.length - 1; e >= 0; e--) {
         const element = applicationFeatureModel.elements[e];
@@ -94,6 +105,11 @@ function createApplicationFeatureModel(domainFeatureModel) {
         }
     }
 
+    let isFeatureModelWithoutAttributes=false; 
+    if (domainFeatureModel.type=="Feature model without attributes") {
+        isFeatureModelWithoutAttributes=true;
+    }
+
     for (let e = applicationFeatureModel.elements.length - 1; e >= 0; e--) {
         const element = applicationFeatureModel.elements[e];
         if (element.type == "Bundle") {
@@ -114,6 +130,11 @@ function createApplicationFeatureModel(domainFeatureModel) {
             }
             applicationFeatureModel.elements.splice(e, 1);
         }
+        // if (isFeatureModelWithoutAttributes) {
+        //     if (element.height==33) {
+        //         element.height=66;
+        //     }
+        // }
     }
 
 
@@ -136,4 +157,4 @@ function generateId() {
 }
 
 //export methods
-module.exports = { generateApplicationFromFeatureModel };
+module.exports = { generateApplicationFromFeatureModel, generateApplicationFromFeatureModelWithoutAttributes };

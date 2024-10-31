@@ -362,6 +362,25 @@ app.post('/generateApplicationFromFeatureModel', async function (req, res, next)
     }
 });
 
+app.post('/generateApplicationFromFeatureModelWithoutAttributes', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await applicationGenerationService.generateApplicationFromFeatureModelWithoutAttributes(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
 app.listen(config.PORT, () => {
     console.log('Running version ' + config.VERSION + ` on http://${config.HOST}:${config.PORT}`);
 });
