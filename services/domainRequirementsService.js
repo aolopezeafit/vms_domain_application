@@ -43,22 +43,30 @@ async function generateFeaturesModel(req) {
         }
     }
 
-    let rootRequirementId = null;
+    let productLine = projectUtils.findProductLine(project, modelId);
+    let featureModel = projectUtils.findDomainModelByType(productLine, "Feature model with attributes");
+    if (!featureModel) {
+        featureModel = featuresModelUtils.createFeatureModel("Feature model with attributes");
+        productLine.domainEngineering.models.push(featureModel);
+        let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
+        featureModel.elements.push(rootFeature);
+    }else{
+        featureModel.elements=[];
+        featureModel.relationships=[];
+        let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
+        featureModel.elements.push(rootFeature);
+    }
 
-    let featuresModel = featuresModelUtils.createFeatureModel("Feature model with attributes");
-    let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
-    featuresModel.elements.push(rootFeature);
 
     let graph = loadGraph();
     //showPaths(graph);
     fx += (fw + fdx)
     let requirements = getRequirements(graph, domainRequirementsModel, requirementsOfAttributes);
-    createFeatures(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy);
-    createConstraints(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature)
+    createFeatures(domainRequirementsModel, featureModel, requirements, dicRequirementFeature, fx, fy, fw, fh, fdx, fdy);
+    createConstraints(domainRequirementsModel, featureModel, requirements, dicRequirementFeature);
 
-    featuresModelService.organize(featuresModel);
+    featuresModelService.organize(featureModel);
 
-    project.productLines[0].domainEngineering.models.push(featuresModel);
     return project;
 }
 
@@ -131,7 +139,7 @@ function createFeatures(domainRequirementsModel, featuresModel, requirements, di
                     name = verb;
                     if (obj) {
                         name += ' ' + obj;
-                    }
+                    } 
                 }
                 if (name) {
                     //let feature = featuresModelUtils.createConcreteFeature(name, (pi * (pw + pdx)) + pdx, py + ph + pdy, pw, ph);
@@ -166,10 +174,10 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                                 name = verb;
                                 if (obj) {
                                     name += ' ' + obj;
-                                }
+                                } 
                             }
                             if (name) {
-                                let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"])) ;
+                                let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"]));
                                 let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
                                 let bundle = featuresModelUtils.createBundle(name, minValue, maxValue, 200, 100, 100, 50);
                                 featuresModel.elements.push(bundle);
@@ -188,9 +196,9 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                             let propertyName = getValueFromPart(secret, ["6_<Object/Asset>"])
                             let strOptions = getValueFromPart(secret, ["8_<Additional object details>"]);
                             let possibleValues = textUtils.normalizeTextList(strOptions);
-                            let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"])) ;
+                            let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"]));
                             let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
-                            let constraint='[' + minValue + '..' + maxValue + ']';
+                            let constraint = '[' + minValue + '..' + maxValue + ']';
                             parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
                             let property = featuresModelUtils.createProperty(propertyName, "String", "Undefined", possibleValues, constraint);
                             parentFeature.properties.push(property);
@@ -261,7 +269,7 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                             }
                         }
 
-                        
+
                         let dependencyRequirements = domainRequirementsModelUtils.findTargetRequirements(domainRequirementsModel, sourceRequirementId, "FunctionalRequirement_FunctionalRequirement", "Dependency")
                         for (let i = 0; i < dependencyRequirements.length; i++) {
                             const dependencyRequirement = dependencyRequirements[i];

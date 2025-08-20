@@ -7,6 +7,8 @@ var mapModelService = require('./services/mapModelService');
 var graphModelService = require('./services/graphModelService');
 var serenaTransfrmations = require('./services/serenaTransformations.js');
 var applicationGenerationService = require('./services/applicationGenerationService.js');
+var applicationCodeGenerationService = require('./services/applicationCodeGenerationService.js');
+var featureComponentBindingModelService = require('./services/featureComponentBindingModelService.js');
 var autocompleteService = require("./services/autocompleteService");
 var additionalRequirements = require('./services/additionalRequirements');
 var relatedRequirementsService = require('./services/relatedRequirementsService');
@@ -368,6 +370,44 @@ app.post('/generateApplicationFromFeatureModelWithoutAttributes', async function
         res.setHeader('Content-Type', 'application/json');
         let project = await applicationGenerationService.generateApplicationFromFeatureModelWithoutAttributes(req);
         console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateFeatureComponentBindingModelFromFeatureModel', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        res.setHeader('Content-Type', 'application/json');
+        let project = await featureComponentBindingModelService.generateFeatureComponentBindingModelFromFeatureModel(req);
+        console.log(project);
+        let contentResponse = {
+            transactionId: "1",
+            message: "Completed.",
+            data: {
+                content: project
+            }
+        }
+        res.end(JSON.stringify(contentResponse));
+    } catch (error) {
+        res.status(400).send(JSON.stringify(error));
+    }
+});
+
+app.post('/generateApplicationCode', async function (req, res, next) {
+    try {
+        console.log(req.body.data)
+        let project = req.body.data.project;
+        res.setHeader('Content-Type', 'application/json');
+        let result = await applicationCodeGenerationService.generateApplicationCode(req);
         let contentResponse = {
             transactionId: "1",
             message: "Completed.",

@@ -51,6 +51,17 @@ function findModel(project, modelId) {
     }
     return model;
 }
+
+function findDomainModelByType(productLine, type) { 
+    for (let m = 0; m < productLine.domainEngineering.models.length; m++) {
+        let plmodel = productLine.domainEngineering.models[m]; 
+        if (plmodel.type == type) {
+            return plmodel;
+        }
+    }
+    return null;
+}
+
 function findApplicationModel(project, modelId) {
     var domain = '';
     let model = null;
@@ -174,4 +185,6 @@ function generateUUID() {
 }
 
 //export methods
-module.exports = { findApplicationByName, findModel, findModelElement, removeModelElement, findElementProperty, findApplicationModel, findApplicationId, findModelByType, createApplication, findProductLine };
+module.exports = { findApplicationByName, findModel,findDomainModelByType, findModelElement, removeModelElement, 
+    findElementProperty, findApplicationModel, findApplicationId, findModelByType, createApplication, 
+    findProductLine };
