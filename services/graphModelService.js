@@ -36,7 +36,15 @@ async function generateJSON(req) {
         const relationship = graphModel.relationships[r];
         let edge = {
             sourceNodeId: relationship.sourceId,
-            targetNodeId: relationship.targetId
+            targetNodeId: relationship.targetId,
+            weight:0
+        }
+        for (let index = 0; index < relationship.properties.length; index++) {
+            const property = relationship.properties[index];
+            if(property.name=="Weight"){
+                edge.weight=parseFloat(property.value);
+                break;
+            }
         }
         obj.edges.push(edge);
     }
