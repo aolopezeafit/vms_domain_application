@@ -7,6 +7,9 @@ var secretGraph = require('./secretGraph.json');
 var { Graph } = require('../utils/graph.js');
 const { positiveUniversalMeasureValue } = require('docx');
 
+const wildCardStart = '[';
+const wildCardEnd = ']';
+
 async function generateFeaturesModel(req) {
     let project = req.body.data.project;
     let modelId = req.body.data.modelSelectedId;
@@ -21,7 +24,8 @@ async function generateFeaturesModel(req) {
     let fy = 100;
     let fdx = 25;
     let fdy = 100;
-    let fi = 0
+    let fi = 0;
+
 
     let dicRequirementFeature = [];
     let requirementsOfAttributes = [];
@@ -50,9 +54,9 @@ async function generateFeaturesModel(req) {
         productLine.domainEngineering.models.push(featureModel);
         let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
         featureModel.elements.push(rootFeature);
-    }else{
-        featureModel.elements=[];
-        featureModel.relationships=[];
+    } else {
+        featureModel.elements = [];
+        featureModel.relationships = [];
         let rootFeature = featuresModelUtils.createRootFeature(project.name, fx, fy, fw, fh);
         featureModel.elements.push(rootFeature);
     }
@@ -129,18 +133,10 @@ function createFeatures(domainRequirementsModel, featuresModel, requirements, di
             }
             let secret = requirement.secret;
             if (secret) {
-                if (containsAllFromPart(secret, ["1C_IN", "6E_BETWEEN"])) {
+                if (containsAllFromPart(secret, ["1c_in", "6e_between"])) {
                     continue;
                 }
-                let name = null;
-                let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
-                let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
-                if (verb) {
-                    name = verb;
-                    if (obj) {
-                        name += ' ' + obj;
-                    } 
-                }
+                let name = generateName(secret); 
                 if (name) {
                     //let feature = featuresModelUtils.createConcreteFeature(name, (pi * (pw + pdx)) + pdx, py + ph + pdy, pw, ph);
                     let feature = featuresModelUtils.createConcreteFeature(name, px + (pi * (pw + pdx)) + pdx, py, pw, ph);
@@ -151,6 +147,31 @@ function createFeatures(domainRequirementsModel, featuresModel, requirements, di
             }
         }
     }
+}
+
+function generateName(secret) {
+    let name = null;
+    let verb = getValueFromPart(secret, ["4a_[process verb]", "4b_[process verb]", "4c_[process verb]"]);
+    let obj = getValueFromPart(secret, ["6_[object/asset]"], ["6_[objects]"]);
+    let as = getValueFromPart(secret, ["6_as"]);
+    let parentesis = getValueFromPart(secret, ["8_("]);
+    let additional = getValueFromPart(secret, ["8_[additional object details]"]);
+    if (obj && !as && !parentesis && additional) {
+        obj += ' ' + additional;
+    }
+    if (verb) {
+        name = verb;
+        if (obj) {
+            name += ' ' + obj;
+        }
+    }
+    if (!name) {
+        let provide = getValueFromPart(secret, ["4b_provide"]);
+        if (provide && obj) {
+            name = obj;
+        }
+    }
+    return name;
 }
 
 function createConstraints(domainRequirementsModel, featuresModel, requirements, dicRequirementFeature) {
@@ -164,26 +185,18 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
             let secret = requirement.secret;
             if (secret) {
                 let parentFeature = rootFeature;
-                if (containsAllFromPart(secret, ["1C_IN"])) {
-                    if (containsAllFromPart(secret, ["6E_BETWEEN"])) {
-                        if (!containsAllFromPart(secret, ["8_<Additional object details>"])) {
-                            let name = null;
-                            let verb = getValueFromPart(secret, ["4A_<Process verb>", "4B_<Process verb>", "4C_<Process verb>"]);
-                            let obj = getValueFromPart(secret, ["6_<Object/Asset>"]);
-                            if (verb) {
-                                name = verb;
-                                if (obj) {
-                                    name += ' ' + obj;
-                                } 
-                            }
+                if (containsAllFromPart(secret, ["1c_in"])) {
+                    if (containsAllFromPart(secret, ["6e_between"])) {
+                        if (!containsAllFromPart(secret, ["8_[additional object details]"])) {
+                            let name = generateName(secret); 
                             if (name) {
-                                let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"]));
-                                let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
+                                let minValue = parseInt(getValueFromPart(secret, ["6e_[a]"]));
+                                let maxValue = parseInt(getValueFromPart(secret, ["6e_[b]"]));
                                 let bundle = featuresModelUtils.createBundle(name, minValue, maxValue, 200, 100, 100, 50);
                                 featuresModel.elements.push(bundle);
                                 dicRequirementFeature[key] = bundle;
 
-                                let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                                let valueFeatureIncluded = getValueFromPart(secret, ["1c_[included feature]"]);
                                 parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
 
                                 let type = parentFeature.type + "_Bundle";
@@ -192,12 +205,12 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                             }
                         }
                         else {
-                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
-                            let propertyName = getValueFromPart(secret, ["6_<Object/Asset>"])
-                            let strOptions = getValueFromPart(secret, ["8_<Additional object details>"]);
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1c_[included feature]"]);
+                            let propertyName = getValueFromPart(secret, ["6_[object/asset]"])
+                            let strOptions = getValueFromPart(secret, ["8_[additional object details]"]);
                             let possibleValues = textUtils.normalizeTextList(strOptions);
-                            let minValue = parseInt(getValueFromPart(secret, ["6E_<A>"]));
-                            let maxValue = parseInt(getValueFromPart(secret, ["6E_<B>"]));
+                            let minValue = parseInt(getValueFromPart(secret, ["6e_[a]"]));
+                            let maxValue = parseInt(getValueFromPart(secret, ["6e_[b]"]));
                             let constraint = '[' + minValue + '..' + maxValue + ']';
                             parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
                             let property = featuresModelUtils.createProperty(propertyName, "String", "Undefined", possibleValues, constraint);
@@ -209,10 +222,10 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                         let sourceRequirementId = requirement.element.id;
                         let refinedRequirements = domainRequirementsModelUtils.findTargetRequirements(domainRequirementsModel, sourceRequirementId, "FunctionalRequirement_FunctionalRequirement", "Refinement")
                         if (refinedRequirements.length == 0) {
-                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1c_[included feature]"]);
                             parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
                         } else {
-                            let valueFeatureIncluded = getValueFromPart(secret, ["1C_<Included feature>"]);
+                            let valueFeatureIncluded = getValueFromPart(secret, ["1c_[included feature]"]);
                             parentFeature = getFeatureByName(valueFeatureIncluded, dicRequirementFeature);
                             for (let r = 0; r < refinedRequirements.length; r++) {
                                 const refinedRequirement = refinedRequirements[r];
@@ -239,11 +252,11 @@ function createConstraints(domainRequirementsModel, featuresModel, requirements,
                     }
                 } else {
                     let type = null;
-                    let value = getValueFromPart(secret, ["2_ALL"]);
+                    let value = getValueFromPart(secret, ["2_all"]);
                     if (value) {
                         type = "Mandatory";
                     } else {
-                        let value = getValueFromPart(secret, ["2_SOME"]);
+                        let value = getValueFromPart(secret, ["2_some"]);
                         if (value) {
                             type = "Optional";
                         }
@@ -402,7 +415,7 @@ function checkPath(path, words) {
             }
             t++;
         } else {
-            if (token.startsWith('<')) {
+            if (token.startsWith(wildCardStart)) {
                 if (!candidateParts['_' + index]) {
                     let item = {
                         word: word,
@@ -483,8 +496,8 @@ function getSecretParts2(graph, initialNodes, description) {
                             key: word,
                             id: index
                         }
-                        if (token == "PROVIDE" && word == "PROVIDE") {
-                            token = "PROVIDE";
+                        if (token == "provide" && word == "provide") {
+                            token = "provide";
                         }
                         candidateParts['_' + index] = item;
                         if (t == tokens.length - 1) {
@@ -492,14 +505,14 @@ function getSecretParts2(graph, initialNodes, description) {
                             break;
                         }
                     } else {
-                        if (word.startsWith('<')) {
+                        if (word.startsWith(wildCardStart)) {
                             let item = {
                                 word: token,
                                 key: word,
                                 id: index
                             }
-                            if (token == "PROVIDE" && word == "PROVIDE") {
-                                token = "PROVIDE";
+                            if (token == "provide" && word == "provide") {
+                                token = "provide";
                             }
                             candidateParts['_' + index] = item;
                             if (t == tokens.length - 1) {
@@ -532,7 +545,7 @@ function getTagFromNode(id) {
 }
 
 function NormalizeWords(text) {
-    let str = text.toUpperCase();
+    let str = text.toLowerCase();
     if (!str.endsWith(".")) {
         str += ".";
     }
